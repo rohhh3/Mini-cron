@@ -21,7 +21,7 @@ typedef struct {
     int  mode;
 } Task;
 
-Task* parse_tasks(char* filename, Task* const tasks)
+Task* parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 {
     // Try to open a taskfile
     int file = open(filename, O_RDONLY);
@@ -32,15 +32,14 @@ Task* parse_tasks(char* filename, Task* const tasks)
     }
 
     // Count tasks
-    int number_of_tasks = 0;
     char c;
     while (read(file, &c, 1) > 0) 
         if (c == '\n') 
-            number_of_tasks++;
+            (*number_of_tasks)++;
 
-    if (number_of_tasks >= MAX_TASKS)
+    if (*number_of_tasks >= MAX_TASKS)
     {
-        fprintf(stderr, "Too many tasks, max: %d; current: %d", MAX_TASKS, number_of_tasks);
+        fprintf(stderr, "Too many tasks, max: %d; current: %d", MAX_TASKS, *number_of_tasks);
         exit(EXIT_FAILURE);
     }
     
@@ -82,11 +81,51 @@ Task* parse_tasks(char* filename, Task* const tasks)
 
     return tasks;
 }
+
+void sort_tasks(Task* const tasks, int number_of_tasks)
+{
+    for (int i = 0; i < number_of_tasks; i++)
+    {
+        for (int j = 0; j < number_of_tasks - 1; j++)
+        {
+            if (tasks[j].hour > tasks[j + 1].hour)
+            {
+                Task temp = tasks[j];
+                tasks[j] = tasks[j + 1];
+                tasks[j + 1] = temp;
+            }
+            else if (tasks[j].hour == tasks[j + 1].hour)
+            {
+                if (tasks[j].minute > tasks[j + 1].minute)
+                {
+                    Task temp = tasks[j];
+                    tasks[j] = tasks[j + 1];
+                    tasks[j + 1] = temp;
+                }
+            }
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
     char* filename = argv[1];
     Task tasks[MAX_TASKS];
-    parse_tasks(filename, tasks);
-    printf("Task 1: %d:%d %s %d\n", tasks[1].hour, tasks[1].minute, tasks[1].command, tasks[1].mode);
+    int number_of_tasks = 1;
+
+    // TESTS
+    parse_tasks(filename, tasks, &number_of_tasks);
+    for (int i = 0; i < number_of_tasks; i++)
+    {
+        printf("%d:%d %s %d\n", tasks[i].hour, tasks[i].minute, tasks[i].command, tasks[i].mode);
+    }
+    printf("Tasks: %d\n\n", number_of_tasks);
+
+    sort_tasks(tasks, number_of_tasks);
+    for (int i = 0; i < number_of_tasks; i++)
+    {
+        printf("%d:%d %s %d\n", tasks[i].hour, tasks[i].minute, tasks[i].command, tasks[i].mode);
+    }
+    printf("Tasks: %d\n", number_of_tasks);
     return 0;
 }
