@@ -21,8 +21,7 @@ typedef struct {
     int  mode;
 } Task;
 
-
-void parse_tasks(char* filename) //change function to return Task objects
+Task* parse_tasks(char* filename, Task* const tasks)
 {
     // Try to open a taskfile
     int file = open(filename, O_RDONLY);
@@ -44,12 +43,11 @@ void parse_tasks(char* filename) //change function to return Task objects
         fprintf(stderr, "Too many tasks, max: %d; current: %d", MAX_TASKS, number_of_tasks);
         exit(EXIT_FAILURE);
     }
-	
+    
 	// Set the file position indicator to the beginning of the file
     lseek(file, 0, SEEK_SET); 
 
     // Parse tasks from taskfile
-    Task tasks[MAX_TASKS];
     char line[MAX_LINE_LENGTH];
     int i = 0;
     while(read(file, &c, 1) > 0 && i < MAX_TASKS) 
@@ -80,14 +78,15 @@ void parse_tasks(char* filename) //change function to return Task objects
         i++;
     }
 
-    // Test (edit tasks.txt to change results)
-    for (int j = 0; j < i; j++) 
-        printf("%d:%d, %s, %d \n", tasks[j].hour, tasks[j].minute, tasks[j].command, tasks[j].mode);
-
     close(file);
+
+    return tasks;
 }
 int main(int argc, char *argv[])
 {
     char* filename = argv[1];
-	parse_tasks(filename);
+    Task tasks[MAX_TASKS];
+    parse_tasks(filename, tasks);
+    printf("Task 1: %d:%d %s %d\n", tasks[1].hour, tasks[1].minute, tasks[1].command, tasks[1].mode);
+    return 0;
 }
