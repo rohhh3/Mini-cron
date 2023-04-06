@@ -21,7 +21,7 @@ typedef struct {
     int  mode;
 } Task;
 
-Task* parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
+void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 {
     // Try to open a taskfile
     int file = open(filename, O_RDONLY);
@@ -49,11 +49,12 @@ Task* parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
     // Parse tasks from taskfile
     char line[MAX_LINE_LENGTH];
     int i = 0;
+    int hour = 0, minute = 0, mode = 0;
+    char command[MAX_COMMAND_LENGTH + 1];
+    
     while(read(file, &c, 1) > 0 && i < MAX_TASKS) 
     {
-        int hour = 0, minute = 0, mode = 0;
-        char command[MAX_COMMAND_LENGTH + 1];
-        int n = 0;
+        unsigned short int n = 0;
 
         while(c != '\n' && n < MAX_LINE_LENGTH - 1) 
         {
@@ -64,9 +65,26 @@ Task* parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 
         line[n] = '\0';
 
-        if (sscanf(line, "%d:%d:%[^:]:%d", &hour, &minute, command, &mode) != 4) 
+        // Log handling
+        if(sscanf(line, "%d:%d:%[^:]:%d", &hour, &minute, command, &mode) != 4) 
         {
             syslog(LOG_WARNING, "Failed to parse line from taskfile: %s", line);
+            continue;
+        }
+        else if(hour < 0 || hour > 23 || minute < 0 || minute > 59) 
+        {
+            syslog(LOG_WARNING, "Invalid time in line from taskfile: %s", line);
+            continue;
+        }
+        /*else if(mode < 1 || mode > 3)
+        {
+            syslog(LOG_WARNING, "Invalid mode in line from taskfile: %s", line);
+            continue;
+        }
+        */
+        else if(strlen(command) > MAX_COMMAND_LENGTH) 
+        {
+            syslog(LOG_WARNING, "Command too long in line from taskfile: %s", line);
             continue;
         }
 
@@ -78,8 +96,6 @@ Task* parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
     }
 
     close(file);
-
-    return tasks;
 }
 
 void sort_tasks(Task* const tasks, int number_of_tasks)
@@ -115,17 +131,10 @@ int main(int argc, char *argv[])
 
     // TESTS
     parse_tasks(filename, tasks, &number_of_tasks);
-    for (int i = 0; i < number_of_tasks; i++)
-    {
-        printf("%d:%d %s %d\n", tasks[i].hour, tasks[i].minute, tasks[i].command, tasks[i].mode);
-    }
-    printf("Tasks: %d\n\n", number_of_tasks);
+    for(int i = 0; i < number_of_tasks; i++)
+        printf("%d:%d:%s:%d\n", tasks[i].hour, tasks[i].minute, tasks[i].command, tasks[i].mode);
 
-    sort_tasks(tasks, number_of_tasks);
-    for (int i = 0; i < number_of_tasks; i++)
-    {
-        printf("%d:%d %s %d\n", tasks[i].hour, tasks[i].minute, tasks[i].command, tasks[i].mode);
-    }
-    printf("Tasks: %d\n", number_of_tasks);
+    //sort_tasks(tasks, number_of_tasks);
+
     return 0;
 }
