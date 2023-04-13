@@ -2,17 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <fcntl.h>
-#include <signal.h>
-#include <errno.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #define MAX_TASKS 100
 #define MAX_COMMAND_LENGTH 100
-#define MAX_MODE_LENGTH 2
-#define MAX_LINE_LENGTH MAX_COMMAND_LENGTH + 2 + MAX_MODE_LENGTH + 1
+#define MAX_MODE_LENGTH 1
+#define MAX_LINE_LENGTH (MAX_COMMAND_LENGTH + 2 + MAX_MODE_LENGTH)
 
 typedef struct {
     int  hour;
@@ -43,7 +41,7 @@ void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
         exit(EXIT_FAILURE);
     }
     
-	// Set the file position indicator to the beginning of the file
+    // Set the file position indicator to the beginning of the file
     lseek(file, 0, SEEK_SET); 
 
     // Parse tasks from taskfile
@@ -51,17 +49,30 @@ void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
     int i = 0;
     int hour = 0, minute = 0, mode = 0;
     char command[MAX_COMMAND_LENGTH + 1];
+    unsigned short int n;
+    bool has_newline;
     
     while(read(file, &c, 1) > 0 && i < MAX_TASKS) 
     {
-        unsigned short int n = 0;
+        n = 0;
+        has_newline = 0;
 
-        while(c != '\n' && n < MAX_LINE_LENGTH - 1) 
+        // Add whitespace at the beginning of the line
+        while(n < MAX_LINE_LENGTH) 
         {
-            line[n] = c;
-            n++;
-            read(file, &c, 1);
+            if(c == '\n') 
+            {
+                has_newline = 1;
+                break;
+            }
+            line[n++] = c;
+            if(read(file, &c, 1) <= 0)
+                break;
         }
+        // If the line is empty, skip to the next line
+        if(n == 0 && !has_newline)
+            continue;
+
 
         line[n] = '\0';
 
@@ -76,29 +87,27 @@ void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
             syslog(LOG_WARNING, "Invalid time in line from taskfile: %s", line);
             continue;
         }
-        /*else if(mode < 1 || mode > 3)
+        else if(mode < 1 || mode > 3)
         {
             syslog(LOG_WARNING, "Invalid mode in line from taskfile: %s", line);
             continue;
         }
-        */
-        else if(strlen(command) > MAX_COMMAND_LENGTH) 
+        else if(strlen(command) > MAX_COMMAND_LENGTH || strlen(command) < 1)
         {
             syslog(LOG_WARNING, "Command too long in line from taskfile: %s", line);
             continue;
         }
-
         tasks[i].hour = hour;
-		tasks[i].mode = mode;
         tasks[i].minute = minute;
         strncpy(tasks[i].command, command, MAX_COMMAND_LENGTH + 1);
+        tasks[i].mode = mode;
         i++;
+    
     }
-
     close(file);
 }
 
-void sort_tasks(Task* const tasks, int number_of_tasks)
+void sort_tasks(Task* tasks, int number_of_tasks)
 {
     for (int i = 0; i < number_of_tasks; i++)
     {
@@ -134,6 +143,7 @@ int main(int argc, char *argv[])
     for(int i = 0; i < number_of_tasks; i++)
         printf("%d:%d:%s:%d\n", tasks[i].hour, tasks[i].minute, tasks[i].command, tasks[i].mode);
 
+    printf("Number of tasks: %d\n", number_of_tasks);
     //sort_tasks(tasks, number_of_tasks);
 
     return 0;
