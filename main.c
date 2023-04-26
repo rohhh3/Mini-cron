@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <pthread.h>
 #include <sys/wait.h>
+#include <signal.h>
 
 #define MAX_TASKS 100
 #define MAX_COMMAND_LENGTH 100
@@ -22,6 +23,15 @@ typedef struct {
 
 Task tasks[MAX_TASKS];
 int number_of_tasks = 1;
+
+void sig_handler(int signal) 
+{
+    if(signal == SIGINT) 
+    {
+        syslog(LOG_INFO, "Received SIGINT signal. Daemon has been terminated");
+        exit(0);
+    }
+}
 
 void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 {
@@ -157,10 +167,9 @@ void execute_tasks(Task* tasks, int number_of_tasks)
             syslog(LOG_ERR, "Failed to fork process to execute task: %s", tasks[i].command);
 
         // Child process
-        else if (pid == 0)
+        else if(pid == 0)
         {
             execl("/bin/sh", "/bin/sh", "-c", tasks[i].command, NULL);
-            syslog(LOG_ERR, "Failed to execute task: %s", tasks[i].command);
             exit(EXIT_FAILURE);
         }
 
@@ -179,12 +188,20 @@ void execute_tasks(Task* tasks, int number_of_tasks)
     }
 }
 
-
 int main(int argc, char *argv[])
 {
     char* filename = argv[1];
     parse_tasks(filename, tasks, &number_of_tasks);
     sort_tasks(tasks, number_of_tasks);
+
+    // Close standard file descriptors
+    close(STDIN_FILENO);
+    close(STDOUT_FILENO);
+    close(STDERR_FILENO);
+
+    // Set signal handler for SIGINT
+    signal(SIGINT, sig_handler);
+
     execute_tasks(tasks, number_of_tasks);
     
     return 0;
