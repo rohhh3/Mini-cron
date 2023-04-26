@@ -6,11 +6,12 @@
 #include <syslog.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <pthread.h>
+#include <sys/wait.h>
 
 #define MAX_TASKS 100
 #define MAX_COMMAND_LENGTH 100
-#define MAX_MODE_LENGTH 1
-#define MAX_LINE_LENGTH (MAX_COMMAND_LENGTH + 2 + MAX_MODE_LENGTH)
+#define MAX_LINE_LENGTH (MAX_COMMAND_LENGTH + 3)
 
 typedef struct {
     int  hour;
@@ -19,11 +20,14 @@ typedef struct {
     int  mode;
 } Task;
 
+Task tasks[MAX_TASKS];
+int number_of_tasks = 1;
+
 void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 {
     // Try to open a taskfile
     int file = open(filename, O_RDONLY);
-    if (file == -1) 
+    if(file == -1) 
     {
         fprintf(stderr, "Error: Failed to open file '%s'\n", filename);
         exit(EXIT_FAILURE);
@@ -31,11 +35,11 @@ void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 
     // Count tasks
     char c;
-    while (read(file, &c, 1) > 0) 
-        if (c == '\n') 
+    while(read(file, &c, 1) > 0) 
+        if(c == '\n') 
             (*number_of_tasks)++;
 
-    if (*number_of_tasks >= MAX_TASKS)
+    if(*number_of_tasks >= MAX_TASKS)
     {
         fprintf(stderr, "Too many tasks, max: %d; current: %d", MAX_TASKS, *number_of_tasks);
         exit(EXIT_FAILURE);
@@ -87,7 +91,7 @@ void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
             syslog(LOG_WARNING, "Invalid time in line from taskfile: %s", line);
             continue;
         }
-        else if(mode < 1 || mode > 3)
+        else if(mode < 0 || mode > 2)
         {
             syslog(LOG_WARNING, "Invalid mode in line from taskfile: %s", line);
             continue;
@@ -132,19 +136,56 @@ void sort_tasks(Task* tasks, int number_of_tasks)
     }
 }
 
+void execute_tasks(Task* tasks, int number_of_tasks)
+{
+    pid_t pid;
+    for (int i = 0; i < number_of_tasks; i++)
+    {
+        time_t now;
+        time(&now);
+        struct tm *current_time = localtime(&now);
+        
+        // If task is in the past, skip it
+        if(current_time->tm_hour > tasks[i].hour || (current_time->tm_hour == tasks[i].hour && current_time->tm_min >= tasks[i].minute))
+            continue;
+        
+        int seconds_until_task = (tasks[i].hour - current_time->tm_hour) * 3600 + (tasks[i].minute - current_time->tm_min) * 60;
+        sleep(seconds_until_task);
+
+        pid = fork();
+        if (pid == -1)
+            syslog(LOG_ERR, "Failed to fork process to execute task: %s", tasks[i].command);
+
+        // Child process
+        else if (pid == 0)
+        {
+            execl("/bin/sh", "/bin/sh", "-c", tasks[i].command, NULL);
+            syslog(LOG_ERR, "Failed to execute task: %s", tasks[i].command);
+            exit(EXIT_FAILURE);
+        }
+
+        // Parent process
+        else
+        {
+            int status;
+            waitpid(pid, &status, 0);
+            if(WIFEXITED(status))
+                if (WIFEXITED(status) != 0)
+                    syslog(LOG_WARNING, "Task exited with non-zero status: %s", tasks[i].command);
+                    
+            else if (WIFSIGNALED(status))
+                syslog(LOG_WARNING, "Task terminated due to signal: %s", tasks[i].command);
+        }
+    }
+}
+
+
 int main(int argc, char *argv[])
 {
     char* filename = argv[1];
-    Task tasks[MAX_TASKS];
-    int number_of_tasks = 1;
-
-    // TESTS
     parse_tasks(filename, tasks, &number_of_tasks);
-    for(int i = 0; i < number_of_tasks; i++)
-        printf("%d:%d:%s:%d\n", tasks[i].hour, tasks[i].minute, tasks[i].command, tasks[i].mode);
-
-    printf("Number of tasks: %d\n", number_of_tasks);
-    //sort_tasks(tasks, number_of_tasks);
-
+    sort_tasks(tasks, number_of_tasks);
+    execute_tasks(tasks, number_of_tasks);
+    
     return 0;
 }
