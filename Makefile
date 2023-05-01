@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -Werror
+CFLAGS=-Wall -Wextra
 EXECUTABLE=main
 
 SRC=main.c execute.c parser.c

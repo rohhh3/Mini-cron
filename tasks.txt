@@ -1,2 +1,2 @@
-00:36:echo "sofgjfiagjfpasga" >> /home/student/Pulpit/file.txt:0
-00:39:touch /home/student/Pulpit/test.txt:0
+03:42:echo "test1" >> /home/chris/Desktop/test.txt:0
+03:43:echo "test2" >> /home/chris/Desktop/test.txt:0

@@ -19,7 +19,6 @@ void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
         exit(EXIT_FAILURE);
     }
 
-
     // Count tasks
     char c;
     while(read(file, &c, 1) > 0)

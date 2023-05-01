@@ -15,14 +15,8 @@ int main()
     parse_tasks(filename, tasks, &number_of_tasks);
     sort_tasks(tasks, number_of_tasks);
 
-    // Close standard file descriptors
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
-
-    // Set signal handler for SIGINT
-    signal(SIGINT, sig_handler);
-
+    initilize_daemon();
+    
     execute_tasks(tasks, number_of_tasks);
 
     return 0;
