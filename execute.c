@@ -13,52 +13,6 @@
 #include "execute.h"
 #include "parser.h"
 
-/* TO DO
-TEST SIGNALS,
-TEST SYSLOG,
-REPLACE EXECL() */
-
-/*
-void initilize_daemon()
-{
-    // Fork off the parent process 
-    pid_t pid = fork();
-    if(pid < 0)
-    {
-        syslog(LOG_ERR, "Failed to fork process to initialize daemon");
-        exit(EXIT_FAILURE);
-    }
-
-    // If we got a good PID, then we can exit the parent process
-    else if(pid > 0)
-        exit(EXIT_SUCCESS);
-
-    // Change the file mode mask
-    umask(0);
-
-    // Create a new SID for the child process
-    pid_t sid = setsid();
-    if (sid < 0) 
-    {
-        syslog(LOG_ERR, "Failed to create new SID for child process");
-        exit(EXIT_FAILURE);
-    }
-   
-    // Change the current working directory
-    if((chdir("/")) < 0)  
-        exit(EXIT_FAILURE);
-
-    // Handling singals
-    
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
-
-    signal(SIGINT, sig_handler);
-    signal(SIGUSR1, sig_handler);
-    signal(SIGUSR2, sig_handler);   
-}
-*/
 void execute_tasks(Task* tasks, int number_of_tasks)
 {
     openlog(NULL, LOG_PID, LOG_USER);
@@ -90,6 +44,10 @@ void execute_tasks(Task* tasks, int number_of_tasks)
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
 
+    signal(SIGINT, sig_handler);
+    signal(SIGUSR1, sig_handler);
+    signal(SIGUSR2, sig_handler); 
+
     for(int i = 0; i < number_of_tasks; i++)
     {
         time_t now;
@@ -119,26 +77,29 @@ void execute_tasks(Task* tasks, int number_of_tasks)
         }
         else if(pid == 0) 
         {
-            if (tasks[i].mode == 0) 
+            switch(tasks[i].mode)
             {
-                // redirect stdout to pipe
-                close(pipefd[0]);
-                dup2(pipefd[1], STDOUT_FILENO);
-                close(pipefd[1]);
-            } 
-            else if (tasks[i].mode == 1) 
-            {
-                // redirect stderr to pipe
-                close(pipefd[0]);
-                dup2(pipefd[1], STDERR_FILENO);
-                close(pipefd[1]);
-            } 
-            else if (tasks[i].mode == 2) 
-            {
-                // redirect both stdout and stderr to pipe
-                close(pipefd[0]);
-                dup2(pipefd[1], STDOUT_FILENO);
-                dup2(pipefd[1], STDERR_FILENO);
+                case 0:
+                {
+                    close(pipefd[0]);
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    close(pipefd[1]);
+                    break;
+                }
+                case 1:
+                {
+                    close(pipefd[0]);
+                    dup2(pipefd[1], STDERR_FILENO);
+                    close(pipefd[1]);
+                    break;
+                }
+                case 2:
+                {
+                    close(pipefd[0]);
+                    dup2(pipefd[1], STDOUT_FILENO);
+                    dup2(pipefd[1], STDERR_FILENO);
+                    break;
+                }
             }
             char *args[] = {"sh", "-c", tasks[i].command, NULL};
             execvp(args[0], args);
@@ -165,28 +126,36 @@ void execute_tasks(Task* tasks, int number_of_tasks)
             // read from pipe
             char buffer[1024];
             int n;
-            if (tasks[i].mode == 0) 
-            {
-                close(pipefd[1]);
-                while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) 
-                    dprintf(fd, "%.*s", n, buffer);
-                
-            } 
-            else if (tasks[i].mode == 1) 
-            {
-                close(pipefd[1]);
-                while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) 
-                    dprintf(fd, "%.*s", n, buffer);
             
-                close(pipefd[0]);
-            } 
-            else if (tasks[i].mode == 2) 
+            switch(tasks[i].mode)
             {
-                close(pipefd[1]);
-                while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) 
-                    dprintf(fd, "%.*s", n, buffer);
+                case 0:
+                {
+                    close(pipefd[1]);
+                    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) 
+                        dprintf(fd, "%.*s", n, buffer);
+
+                     close(pipefd[0]);
+                    break;
+                }
+                case 1:
+                {
+                    close(pipefd[1]);
+                    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) 
+                        dprintf(fd, "%.*s", n, buffer);
+            
+                    close(pipefd[0]);
+                    break;
+                }
+                case 2:
+                {
+                    close(pipefd[1]);
+                    while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) 
+                        dprintf(fd, "%.*s", n, buffer);
                 
-                close(pipefd[0]);     
+                    close(pipefd[0]);
+                    break;
+                }
             }
             // write the command to the output file
             dprintf(fd, "Task executed at %02d:%02d: %s\n", tasks[i].hour, tasks[i].minute, tasks[i].command);

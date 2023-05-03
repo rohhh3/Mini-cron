@@ -1,2 +1,2 @@
-23:46:echo "test6" >> /home/student/Pulpit/file.txt:0
-23:47:echo "test7" >> /home/student/Pulpit/file.txt:0
+01:03:echo "test mode 1" >> /home/student/Pulpit/file.txt:1
+01:04:echo "test mode 2" >> /home/student/Pulpit/file.txt:2
