@@ -7,13 +7,15 @@
 #include "execute.h"
 
 Task tasks[MAX_TASKS];
-int number_of_tasks = 1;
+unsigned int number_of_tasks = 1;
 
-int main()
-{
-    char* filename = "tasks.txt";
+int main(int argc, char** argv)
+{   
+    char* filename = argv[1];
     parse_tasks(filename, tasks, &number_of_tasks);
     sort_tasks(tasks, number_of_tasks);
+
+    printf("Number of tasks: %d\n", number_of_tasks);
 
     initilize_daemon();
     

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "task.h"
 #include "execute.h"
+#include "parser.h"
 
 /* TO DO
 TEST SIGNALS,
@@ -41,14 +42,17 @@ void initilize_daemon()
     }
    
     // Change the current working directory
-    if ((chdir("/")) < 0)  
+    if((chdir("/")) < 0)  
         exit(EXIT_FAILURE);
- 
+
+    // Handling singals
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
+
     signal(SIGINT, sig_handler);
-    signal(SIGTERM, sig_handler);
+    signal(SIGUSR1, sig_handler);
+    signal(SIGUSR2, sig_handler);   
 }
 void execute_tasks(Task* tasks, int number_of_tasks)
 {
@@ -60,7 +64,7 @@ void execute_tasks(Task* tasks, int number_of_tasks)
 
         // If task is in the past, skip it
         if(current_time->tm_hour > tasks[i].hour || (current_time->tm_hour == tasks[i].hour && current_time->tm_min >= tasks[i].minute))
-        continue;
+            continue;
 
         int seconds_until_task = (tasks[i].hour - current_time->tm_hour) * 3600 + (tasks[i].minute - current_time->tm_min) * 60;
         sleep(seconds_until_task);
@@ -76,7 +80,7 @@ void execute_tasks(Task* tasks, int number_of_tasks)
             umask(0);
             pid_t sid = setsid();
             execl("/bin/sh", "/bin/sh", "-c", tasks[i].command, NULL);
-            syslog(LOG_ERR, "Task has been executed successfully");
+            syslog(LOG_INFO, "Task has been executed successfully");
         }
         
         else if(pid > 0)
@@ -101,10 +105,51 @@ void execute_tasks(Task* tasks, int number_of_tasks)
 
 void sig_handler(int signal)
 {
-    if(signal == SIGINT)
+    unsigned int buff = 1;
+    switch(signal)
     {
-        syslog(LOG_INFO, "Received SIGINT signal. Daemon has been terminated");
-        exit(0);
+        case SIGINT:
+        {
+            syslog(LOG_INFO, "Received SIGINT signal. Daemon has been terminated");
+            exit(EXIT_SUCCESS);
+            break;
+        }
+        case SIGUSR1:
+        {
+            syslog(LOG_INFO, "Received SIGUSR1 signal. Daemon has been reloaded.");
+            Task tasks[MAX_TASKS];
+            int number_of_tasks = parse_tasks("tasks.txt", tasks, &buff);
+            sort_tasks(tasks, number_of_tasks);
+            execute_tasks(tasks, number_of_tasks);
+            break;
+        }
+        case SIGUSR2:
+        {
+            syslog(LOG_INFO, "Received SIGUSR2 signal. Remaining tasks:");
+            Task tasks[MAX_TASKS];
+            int number_of_tasks = parse_tasks("tasks.txt", tasks, &buff);
+            syslog(LOG_INFO, "Number of tasks: %d", number_of_tasks);
+            sort_tasks(tasks, number_of_tasks);
+            for(int i = 0; i < number_of_tasks; i++)
+            {
+                time_t now;
+                time(&now);
+                struct tm *current_time = localtime(&now);
+
+                // If task is in the past, skip it
+                if(current_time->tm_hour > tasks[i].hour || (current_time->tm_hour == tasks[i].hour && current_time->tm_min >= tasks[i].minute))
+                    continue;
+
+                syslog(LOG_INFO, "%d:%d %s", tasks[i].hour, tasks[i].minute, tasks[i].command);
+            }
+            break;
+        }
+        default:
+        {
+            syslog(LOG_ERR, "Received unknown signal");
+            exit(EXIT_SUCCESS);
+            break;
+        }
     }
         
 }

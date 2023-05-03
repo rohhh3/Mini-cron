@@ -9,7 +9,7 @@
 #include "parser.h"
 #include "task.h"
 
-void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
+int parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 {
     // Try to open a taskfile
     int file = open(filename, O_RDONLY);
@@ -95,6 +95,7 @@ void parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 
     }
     close(file);
+    return *number_of_tasks;
 }
 
 void sort_tasks(Task* tasks, int number_of_tasks)
