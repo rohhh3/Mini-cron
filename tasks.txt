@@ -1,2 +1,2 @@
-04:20:echo "test6" >> /home/student/Pulpit/file.txt:0
-04:21:echo "test6" >> /home/student/Pulpit/file.txt:0
+23:46:echo "test6" >> /home/student/Pulpit/file.txt:0
+23:47:echo "test7" >> /home/student/Pulpit/file.txt:0

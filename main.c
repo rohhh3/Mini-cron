@@ -17,8 +17,6 @@ int main(int argc, char** argv)
 
     printf("Number of tasks: %d\n", number_of_tasks);
 
-    initilize_daemon();
-    
     execute_tasks(tasks, number_of_tasks);
 
     return 0;

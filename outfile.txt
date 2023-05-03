@@ -1,0 +1,2 @@
+Task executed at 23:46: echo "test6" >> /home/student/Pulpit/file.txt
+Task executed at 23:47: echo "test7" >> /home/student/Pulpit/file.txt
