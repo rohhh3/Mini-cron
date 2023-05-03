@@ -83,7 +83,6 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                 {
                     close(pipefd[0]);
                     dup2(pipefd[1], STDOUT_FILENO);
-                    close(pipefd[1]);
                     break;
                 }
                 case 1:
@@ -158,8 +157,8 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                 }
             }
             // write the command to the output file
-            dprintf(fd, "Task executed at %02d:%02d: %s\n", tasks[i].hour, tasks[i].minute, tasks[i].command);
-            syslog(LOG_INFO, "Task executed: %s (exit status: %d)", tasks[i].command, WEXITSTATUS(status));    
+            dprintf(fd, "Task executed at %d:%d: %s\n", tasks[i].hour, tasks[i].minute, tasks[i].command);
+            syslog(LOG_INFO, "Task executed: %s (exit status: %d) at %d:%d", tasks[i].command, WEXITSTATUS(status), tasks[i].hour, tasks[i].minute);    
         }    
     }
 }
@@ -204,6 +203,7 @@ void sig_handler(int signal)
 
                 syslog(LOG_INFO, "%d:%d %s", tasks[i].hour, tasks[i].minute, tasks[i].command);
             }
+            exit(EXIT_SUCCESS);
             break;
         }
         default:

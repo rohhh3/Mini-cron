@@ -1,2 +1,16 @@
-Task executed at 01:03: echo "test mode 1" >> /home/student/Pulpit/file.txt
-Task executed at 01:04: echo "test mode 2" >> /home/student/Pulpit/file.txt
+execute.c
+execute.h
+execute.o
+main
+main.c
+main.o
+Makefile
+outfile.txt
+parser.c
+parser.h
+parser.o
+task.h
+tasks.txt
+Task executed at 1:50: ls
+ls: błąd zapisu: Błędny deskryptor pliku
+Task executed at 1:51: ls -al
