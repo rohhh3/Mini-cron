@@ -1,3 +1,0 @@
-Task executed at 02:33: echo "siema eniu" >> /home/student/Pulpit/file.txt
-Task executed at 02:34: echo "siema eniu" >> /home/student/Pulpit/file.txt
-Task executed at 02:35: echo "siema eniu" >> /home/student/Pulpit/file.txt

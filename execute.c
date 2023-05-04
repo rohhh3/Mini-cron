@@ -16,26 +16,26 @@ void execute_tasks(Task* tasks, int number_of_tasks)
 {
     openlog(NULL, LOG_PID, LOG_USER);
 
-    // open output file
+    // Open outfile
     int fd = open("outfile.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
-    if (fd == -1) {
-        perror("Error opening outfile");
-        exit(1);
+    if(fd == -1) 
+    {
+        fprintf(stderr, "Error: Failed to open file outfile.txt\n");
+        exit(EXIT_FAILURE);
     }
 
-    // fork to create daemon
+    // Create daemon
     pid_t pid = fork();
-    if (pid == -1) {
-        perror("Error creating daemon");
-        exit(1);
+    if(pid < 0) 
+    {
+        fprintf(stderr, "Error: Failed to fork process\n");
+        exit(EXIT_FAILURE);
     }
 
-    if (pid != 0) {
-        // parent process, exit
+    // Exit parent process
+    if(pid != 0) 
         exit(0);
-    }
 
-    // child process, continue as daemon
     setsid();
 
     // close standard file descriptors
@@ -60,12 +60,12 @@ void execute_tasks(Task* tasks, int number_of_tasks)
         int seconds_until_task = (tasks[i].hour - current_time->tm_hour) * 3600 + (tasks[i].minute - current_time->tm_min) * 60;
         sleep(seconds_until_task);
 
-        // create pipe
+        // Create pipe
         int pipefd[2];
-        if (pipe(pipefd) == -1) 
+        if(pipe(pipefd) == -1) 
         {
-            perror("Error creating pipe");
-            exit(1);
+            fprintf(stderr, "Error: Failed to create a pipe\n");
+            exit(EXIT_FAILURE);
         }
 
         pid_t pid = fork();
@@ -88,7 +88,6 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                 {
                     close(pipefd[0]);
                     dup2(pipefd[1], STDERR_FILENO);
-                    close(pipefd[1]);
                     break;
                 }
                 case 2:
@@ -99,11 +98,21 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                     break;
                 }
             }
+            /*
+            char *args[MAX_ARGS];
+            int arg_count = 0;
+            char *arg = strtok(tasks[i].command, " "); 
+            while (arg != NULL && arg_count < MAX_ARGS) {
+                args[arg_count++] = arg;
+                arg = strtok(NULL, " ");
+            }
+            args[arg_count] = NULL; 
+            execvp(args[0], args);
+            */
             char *args[] = {"sh", "-c", tasks[i].command, NULL};
             execvp(args[0], args);
             syslog(LOG_INFO, "Task has been executed successfully");
         }
-        
         else if(pid > 0)
         {
             int status;
@@ -121,7 +130,7 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                 syslog(LOG_ERR, "Child process has been stopped by signal %d", WSTOPSIG(status));
             }
 
-            // read from pipe
+            // Read from pipe
             char buffer[1024];
             int n;
             
@@ -133,7 +142,9 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                     while ((n = read(pipefd[0], buffer, sizeof(buffer))) > 0) 
                         dprintf(fd, "%.*s", n, buffer);
 
-                     close(pipefd[0]);
+                    close(pipefd[0]);
+                    dprintf(fd, "Task executed with mode %d at %02d:%02d: %s\n", tasks[i].mode, tasks[i].hour, tasks[i].minute, tasks[i].command);
+                    syslog(LOG_INFO, "Task executed: %s (exit status: %d) at %02d:%02d", tasks[i].command, WEXITSTATUS(status), tasks[i].hour, tasks[i].minute);  
                     break;
                 }
                 case 1:
@@ -143,6 +154,8 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                         dprintf(fd, "%.*s", n, buffer);
             
                     close(pipefd[0]);
+                    dprintf(fd, "Task %s hasn't been executed", tasks[i].command);
+                    syslog(LOG_INFO, "Task %s hasn't been executed", tasks[i].command); 
                     break;
                 }
                 case 2:
@@ -152,16 +165,14 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                         dprintf(fd, "%.*s", n, buffer);
                 
                     close(pipefd[0]);
+                    dprintf(fd, "Task executed with mode %d at %02d:%02d: %s\n", tasks[i].mode, tasks[i].hour, tasks[i].minute, tasks[i].command);
+                    syslog(LOG_INFO, "Task executed: %s (exit status: %d) at %02d:%02d", tasks[i].command, WEXITSTATUS(status), tasks[i].hour, tasks[i].minute);  
                     break;
                 }
-            }
-            // write the command to the output file
-            dprintf(fd, "Task executed with mode %d at %02d:%02d: %s\n", tasks[i].mode, tasks[i].hour, tasks[i].minute, tasks[i].command);
-            syslog(LOG_INFO, "Task executed: %s (exit status: %d) at %02d:%02d", tasks[i].command, WEXITSTATUS(status), tasks[i].hour, tasks[i].minute);    
+            }  
         }    
     }
 }
-
 
 void sig_handler(int signal)
 {

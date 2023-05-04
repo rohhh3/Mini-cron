@@ -9,7 +9,7 @@
 #include "parser.h"
 #include "task.h"
 
-int parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
+int parse_tasks(char* filename, Task* tasks, unsigned int* number_of_tasks)
 {
     // Try to open a taskfile
     int file = open(filename, O_RDONLY);
@@ -27,7 +27,7 @@ int parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
 
     if(*number_of_tasks >= MAX_TASKS)
     {
-        fprintf(stderr, "Too many tasks, max: %d; current: %d", MAX_TASKS, *number_of_tasks);
+        fprintf(stderr, "Error: Too many tasks, max: %d; current: %d", MAX_TASKS, *number_of_tasks);
         exit(EXIT_FAILURE);
     }
 
@@ -69,22 +69,22 @@ int parse_tasks(char* filename, Task* tasks, int* number_of_tasks)
         // Log handling
         if(sscanf(line, "%d:%d:%[^:]:%d", &hour, &minute, command, &mode) != 4)
         {
-            syslog(LOG_WARNING, "Failed to parse line from taskfile: %s", line);
+            syslog(LOG_WARNING, "Error: Failed to parse line from taskfile: %s", line);
             continue;
         }
         else if(hour < 0 || hour > 23 || minute < 0 || minute > 59)
         {
-            syslog(LOG_WARNING, "Invalid time in line from taskfile: %s", line);
+            syslog(LOG_WARNING, "Error: Invalid time in line from taskfile: %s", line);
             continue;
         }
         else if(mode < 0 || mode > 2)
         {
-            syslog(LOG_WARNING, "Invalid mode in line from taskfile: %s", line);
+            syslog(LOG_WARNING, "Error: Invalid mode in line from taskfile: %s", line);
             continue;
         }
         else if(strlen(command) > MAX_COMMAND_LENGTH || strlen(command) < 1)
         {
-            syslog(LOG_WARNING, "Command too long in line from taskfile: %s", line);
+            syslog(LOG_WARNING, "Error: Command too long in line from taskfile: %s", line);
             continue;
         }
         tasks[i].hour = hour;
