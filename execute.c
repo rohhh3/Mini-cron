@@ -6,7 +6,6 @@
 #include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <features.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include "task.h"
@@ -157,8 +156,8 @@ void execute_tasks(Task* tasks, int number_of_tasks)
                 }
             }
             // write the command to the output file
-            dprintf(fd, "Task executed at %d:%d: %s\n", tasks[i].hour, tasks[i].minute, tasks[i].command);
-            syslog(LOG_INFO, "Task executed: %s (exit status: %d) at %d:%d", tasks[i].command, WEXITSTATUS(status), tasks[i].hour, tasks[i].minute);    
+            dprintf(fd, "Task executed with mode %d at %02d:%02d: %s\n", tasks[i].mode, tasks[i].hour, tasks[i].minute, tasks[i].command);
+            syslog(LOG_INFO, "Task executed: %s (exit status: %d) at %02d:%02d", tasks[i].command, WEXITSTATUS(status), tasks[i].hour, tasks[i].minute);    
         }    
     }
 }

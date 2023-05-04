@@ -1,5 +1,2 @@
-01:30:echo "test mode 1" >> /home/student/Pulpit/file.txt:1
-01:35:echo "test mode 2" >> /home/student/Pulpit/file.txt:2
-01:36:echo "test sigusr1" >> /home/student/Pulpit/file.txt:2
-01:50:ls:0
-01:51:ls -al:0
+02:34:echo "siema eniu" >> /home/student/Pulpit/file.txt:1
+02:35:echo "siema eniu" >> /home/student/Pulpit/file.txt:2
