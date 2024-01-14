@@ -1,7 +1,19 @@
-OBJ = main.o 
-all: main
-main: $(OBJ)
-	gcc $(OBJ) -o main
-.PHONY: clean
+CC=gcc
+CFLAGS=-Wall
+EXECUTABLE=main
+
+SRC=main.c execute.c parser.c
+OBJ=$(SRC:.c=.o)
+
+all: $(EXECUTABLE)
+
+$(EXECUTABLE): $(OBJ)
+	$(CC) $(CFLAGS) $^ -o $@
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
 clean:
-	rm -f *.o
+	rm -f $(OBJ) $(EXECUTABLE)
+
+.PHONY: clean

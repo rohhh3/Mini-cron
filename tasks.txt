@@ -1,1 +1,5 @@
-20:59:code /home/student/Pulpit/file.txt:0
+03:20:echo "siema eniu" >> /home/student/Pulpit/file.txt:1
+03:42:ls:0
+03:43:ls -al:0
+03:44:wc -xd:1
+03:45:ls -al | wc:2
